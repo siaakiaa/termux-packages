@@ -1,32 +1,22 @@
-diff -uNr pacman-6.0.0/etc/pacman.conf.in pacman-termux/etc/pacman.conf.in
---- pacman-6.0.0/etc/pacman.conf.in	2021-05-20 06:38:45.938120000 +0300
-+++ pacman-termux/etc/pacman.conf.in	2021-11-05 17:39:44.301346062 +0300
-@@ -9,20 +9,20 @@
- [options]
- # The following paths are commented out with their default values listed.
- # If you wish to use different paths, uncomment and update the paths.
--#RootDir     = @ROOTDIR@
-+#RootDir     = /
- #DBPath      = @localstatedir@/lib/pacman/
- #CacheDir    = @localstatedir@/cache/pacman/pkg/
+--- pacman-7.0.0/etc/pacman.conf.in	2024-07-14 12:11:18.000000000 +0300
++++ pacman-7.0.0/etc/pacman.conf.in.patch	2024-09-15 13:49:59.248174976 +0300
+@@ -15,11 +15,11 @@
  #LogFile     = @localstatedir@/log/pacman.log
  #GPGDir      = @sysconfdir@/pacman.d/gnupg/
  #HookDir     = @sysconfdir@/pacman.d/hooks/
 -HoldPkg     = pacman glibc
 -#XferCommand = /usr/bin/curl -L -C - -f -o %o %u
 -#XferCommand = /usr/bin/wget --passive-ftp -c -O %o %u
++HoldPkg      = pacman
 +#XferCommand = @TERMUX_PREFIX@/bin/curl -L -C - -f -o %o %u
 +#XferCommand = @TERMUX_PREFIX@/bin/wget --passive-ftp -c -O %o %u
-+HoldPkg      = pacman
  #CleanMethod = KeepInstalled
- Architecture = auto
+-Architecture = auto
++Architecture = @TERMUX_ARCH@
  
  # Pacman won't upgrade packages listed in IgnorePkg and members of IgnoreGroup
  #IgnorePkg   =
- #IgnoreGroup =
- 
- #NoUpgrade   =
-@@ -30,16 +30,21 @@
+@@ -30,7 +30,7 @@
  
  # Misc options
  #UseSyslog
@@ -35,7 +25,9 @@ diff -uNr pacman-6.0.0/etc/pacman.conf.in pacman-termux/etc/pacman.conf.in
  #NoProgressBar
  CheckSpace
  #VerbosePkgLists
- ParallelDownloads = 5
+@@ -38,10 +38,11 @@
+ #DownloadUser = alpm
+ #DisableSandbox
  
 -# PGP signature checking
 -#SigLevel = Optional
@@ -43,17 +35,13 @@ diff -uNr pacman-6.0.0/etc/pacman.conf.in pacman-termux/etc/pacman.conf.in
 -#RemoteFileSigLevel = Optional
 +# By default, pacman accepts packages signed by keys that its local keyring
 +# trusts (see pacman-key and its man page), as well as unsigned packages.
-+SigLevel    = Never
++SigLevel    = DatabaseRequired
 +LocalFileSigLevel = Optional
 +#RemoteFileSigLevel = Required
-+
-+# NOTE: You must run `pacman-key --init` before first using pacman; the local
-+# keyring can then be populated with the keys of all official Arch Linux ARM
-+# packagers with `pacman-key --populate archlinuxarm`.
  
  #
  # REPOSITORIES
-@@ -60,18 +65,12 @@
+@@ -62,18 +63,23 @@
  # uncommented to enable the repo.
  #
  
@@ -71,13 +59,24 @@ diff -uNr pacman-6.0.0/etc/pacman.conf.in pacman-termux/etc/pacman.conf.in
 -# tips on creating your own repositories.
 -#[custom]
 -#SigLevel = Optional TrustAll
--#Server = file:///home/custompkgs
-+# The testing repositories are disabled by default. To enable, uncomment the
-+# repo name header and Include lines. You can add preferred servers immediately
-+# after the header, and they will be used before the default mirrors.
-+
+-#Server = file:///home/packages
 +[main]
-+Server = https://maxython.github.io/termux-packages-in-pacman-format/main/$arch
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist
 +
 +[x11]
-+Server = https://maxython.github.io/termux-packages-in-pacman-format/x11/$arch
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist
++
++[root]
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist
++
++[tur]
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist
++
++[tur-continuous]
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist
++
++[tur-multilib]
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist
++
++[gpkg]
++Include = @TERMUX_PREFIX@/etc/pacman.d/serverlist

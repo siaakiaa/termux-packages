@@ -2,15 +2,21 @@ TERMUX_PKG_HOMEPAGE=https://rybczak.net/ncmpcpp/
 TERMUX_PKG_DESCRIPTION="NCurses Music Player Client (Plus Plus)"
 TERMUX_PKG_LICENSE="GPL-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=0.8.2
-TERMUX_PKG_REVISION=21
-TERMUX_PKG_SRCURL=https://rybczak.net/ncmpcpp/stable/ncmpcpp-${TERMUX_PKG_VERSION}.tar.bz2
-TERMUX_PKG_SHA256=650ba3e8089624b7ad9e4cc19bc1ac6028edb7523cc111fa1686ea44c0921554
-TERMUX_PKG_DEPENDS="fftw, boost, readline, libandroid-support, libc++, libcurl, libicu, libmpdclient, ncurses, zlib"
+TERMUX_PKG_VERSION="0.10.1"
+TERMUX_PKG_REVISION=1
+TERMUX_PKG_SRCURL=https://github.com/ncmpcpp/ncmpcpp/archive/refs/tags/${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=ddc89da86595d272282ae8726cc7913867b9517eec6e765e66e6da860b58e2f9
+TERMUX_PKG_DEPENDS="boost, fftw, libandroid-support, libc++, libcurl, libicu, libmpdclient, ncurses, readline, taglib"
+TERMUX_PKG_BUILD_DEPENDS="boost-headers"
 TERMUX_PKG_BUILD_IN_SRC=true
-TERMUX_PKG_EXTRA_CONFIGURE_ARGS="--enable-visualizer --enable-outputs --enable-clock"
+TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
+--enable-clock
+--enable-outputs
+--enable-visualizer
+--with-taglib
+"
 
 termux_step_pre_configure() {
-	./autogen.sh
+	autoreconf -fi
 	CXXFLAGS+=" -DNCURSES_WIDECHAR -U_XOPEN_SOURCE"
 }

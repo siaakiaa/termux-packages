@@ -7,8 +7,24 @@ Session.vim
 *~
 
 # Vagrant
-scripts/*.log
 scripts/.vagrant/
+
+# Logs
+scripts/*.log
+/*.log
+
+# Misc archives
+/*\.deb
+/*\.zip
+/*\.tar
+/*\.tar\.*
+
+# Source files.
+/sources/
+
+# GitHub Actions build artifacts
+debs*
+checksum*
 
 # Built *.deb files.
 /debs/
@@ -19,3 +35,8 @@ scripts/.vagrant/
 
 # Predownloaded packages sources.
 /packages/*/cache
+/root-packages/*/cache
+/x11-packages/*/cache
+
+# Temp .git directories for packages built from local sources "file://"
+/*.git

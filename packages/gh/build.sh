@@ -2,9 +2,10 @@ TERMUX_PKG_HOMEPAGE=https://cli.github.com/
 TERMUX_PKG_DESCRIPTION="GitHub’s official command line tool"
 TERMUX_PKG_LICENSE="MIT"
 TERMUX_PKG_MAINTAINER="Krishna kanhaiya @kcubeterm"
-TERMUX_PKG_VERSION=2.2.0
-TERMUX_PKG_SRCURL=https://github.com/cli/cli/archive/v${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=597c6c1cde4484164e9320af0481e33cfad2330a02315b4c841bdc5b7543caec
+TERMUX_PKG_VERSION="2.65.0"
+TERMUX_PKG_SRCURL=https://github.com/cli/cli/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=af026f1b0368b1444a67a941f179ddce7e97333881ec0bbcb49fed29f4151241
+TERMUX_PKG_RECOMMENDS="openssh"
 TERMUX_PKG_AUTO_UPDATE=true
 
 termux_step_make() {
@@ -28,4 +29,17 @@ termux_step_make() {
 termux_step_make_install() {
 	install -Dm700 -t "$TERMUX_PREFIX"/bin "$GOPATH"/src/github.com/cli/cli/cmd/gh/gh
 	install -Dm600 -t "$TERMUX_PREFIX"/share/doc/gh/ "$TERMUX_PKG_SRCDIR"/docs/*
+
+	install -Dm644 /dev/null "$TERMUX_PREFIX"/share/bash-completion/completions/gh.bash
+	install -Dm644 /dev/null "$TERMUX_PREFIX"/share/zsh/site-functions/_gh
+	install -Dm644 /dev/null "$TERMUX_PREFIX"/share/fish/vendor_completions.d/gh.fish
+}
+
+termux_step_create_debscripts() {
+	cat <<-EOF >./postinst
+		#!${TERMUX_PREFIX}/bin/sh
+		gh completion -s bash > ${TERMUX_PREFIX}/share/bash-completion/completions/gh.bash
+		gh completion -s zsh > ${TERMUX_PREFIX}/share/zsh/site-functions/_gh
+		gh completion -s fish > ${TERMUX_PREFIX}/share/fish/vendor_completions.d/gh.fish
+	EOF
 }

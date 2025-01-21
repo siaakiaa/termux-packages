@@ -1,6 +1,6 @@
 termux_setup_gn() {
 	termux_setup_ninja
-	local GN_COMMIT=4aa9bdfa05b688c58d3d7d3e496f3f18cbb3d89e
+	local GN_COMMIT=e30a1fe26e5e72cb7cb9f27d9abe2330e4115ae5
 	local GN_TARFILE=$TERMUX_COMMON_CACHEDIR/gn_$GN_COMMIT.tar.gz
 	local GN_SOURCE=https://gn.googlesource.com/gn/+archive/$GN_COMMIT.tar.gz
 
@@ -30,8 +30,8 @@ termux_setup_gn() {
 				cat <<-EOF >./out/last_commit_position.h
 					#ifndef OUT_LAST_COMMIT_POSITION_H_
 					#define OUT_LAST_COMMIT_POSITION_H_
-					#define LAST_COMMIT_POSITION_NUM 1945
-					#define LAST_COMMIT_POSITION "1945 ${GN_COMMIT:0:8}"
+					#define LAST_COMMIT_POSITION_NUM 1953
+					#define LAST_COMMIT_POSITION "2034 ${GN_COMMIT:0:8}"
 					#endif  // OUT_LAST_COMMIT_POSITION_H_
 				EOF
 				ninja -C out/
@@ -40,11 +40,14 @@ termux_setup_gn() {
 		fi
 		export PATH=$GN_FOLDER/out:$PATH
 	else
-		if [ "$(dpkg-query -W -f '${db:Status-Status}\n' gn 2>/dev/null)" != "installed" ]; then
+		if [[ "$TERMUX_APP_PACKAGE_MANAGER" = "apt" && "$(dpkg-query -W -f '${db:Status-Status}\n' gn 2>/dev/null)" != "installed" ]] ||
+                   [[ "$TERMUX_APP_PACKAGE_MANAGER" = "pacman" && ! "$(pacman -Q gn 2>/dev/null)" ]]; then
 			echo "Package 'gn' is not installed."
 			echo "You can install it with"
 			echo
 			echo "  pkg install gn"
+			echo
+			echo "  pacman -S gn"
 			echo
 			exit 1
 		fi

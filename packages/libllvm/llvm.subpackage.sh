@@ -3,8 +3,9 @@ bin/bugpoint
 bin/dsymutil
 bin/llc
 bin/lli
-bin/llvm*
+bin/llvm!(-jitlink-executor|-PerfectShuffle)
 bin/opt
+bin/reduce-chunk-list
 bin/sancov
 bin/sanstats
 bin/split-file

@@ -2,21 +2,30 @@ TERMUX_PKG_HOMEPAGE=https://github.com/gravitational/teleport
 TERMUX_PKG_DESCRIPTION="Secure Access for Developers that doesn't get in the way"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=5.1.2
-TERMUX_PKG_REVISION=1
-TERMUX_PKG_SKIP_SRC_EXTRACT=true
+TERMUX_PKG_VERSION="17.1.6"
+TERMUX_PKG_SRCURL=https://github.com/gravitational/teleport/archive/refs/tags/v$TERMUX_PKG_VERSION.tar.gz
+TERMUX_PKG_SHA256=ad309d5e21cbe0414889fc2518196b8d30645ae150e66a0f7e8b7310b6ef213e
+TERMUX_PKG_AUTO_UPDATE=true
+TERMUX_PKG_BUILD_IN_SRC=true
+TERMUX_PKG_HOSTBUILD=true
 
-termux_step_make_install() {
+termux_step_host_build() {
 	termux_setup_golang
-	export GOPATH=$TERMUX_PKG_BUILDDIR
-	export BUILDDIR=$TERMUX_PREFIX/bin
+	pushd "$TERMUX_PKG_SRCDIR"
 
-	mkdir -p $GOPATH/src/github.com/gravitational
-	cd $GOPATH/src/github.com/gravitational
-	git clone https://github.com/gravitational/teleport.git
-	cd teleport
+	# from Makefile
+	export KUBECTL_VERSION=$(go run ./build.assets/kubectl-version/main.go)
+	popd
+}
 
-	git checkout "v$TERMUX_PKG_VERSION"
+termux_step_make() {
+	termux_setup_golang
+	export GOPATH=$TERMUX_PKG_CACHEDIR/go
+	export BUILDDIR=$TERMUX_PKG_SRCDIR/cmd
 
 	make $BUILDDIR/tsh
+}
+
+termux_step_make_install() {
+	install -Dm700 -t $TERMUX_PREFIX/bin $BUILDDIR/tsh
 }

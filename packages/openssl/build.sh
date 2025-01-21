@@ -1,10 +1,11 @@
 TERMUX_PKG_HOMEPAGE=https://www.openssl.org/
 TERMUX_PKG_DESCRIPTION="Library implementing the SSL and TLS protocols as well as general purpose cryptography functions"
-TERMUX_PKG_LICENSE="BSD"
+TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=1.1.1l
-TERMUX_PKG_SRCURL=https://www.openssl.org/source/openssl-${TERMUX_PKG_VERSION/\~/-}.tar.gz
-TERMUX_PKG_SHA256=0b7a3e5e59c34827fe0c3a74b7ec8baef302b98fa80088d7f9153aa16fa76bd1
+TERMUX_PKG_VERSION=1:3.3.2
+TERMUX_PKG_SRCURL=https://github.com/openssl/openssl/releases/download/openssl-${TERMUX_PKG_VERSION:2}/openssl-${TERMUX_PKG_VERSION:2}.tar.gz
+TERMUX_PKG_SHA256=2e8a40b01979afe8be0bbfb3de5dc1c6709fedb46d6c89c10da114ab5fc3d281
+TERMUX_PKG_AUTO_UPDATE=false
 TERMUX_PKG_DEPENDS="ca-certificates, zlib"
 TERMUX_PKG_CONFFILES="etc/tls/openssl.cnf"
 TERMUX_PKG_RM_AFTER_INSTALL="bin/c_rehash etc/ssl/misc"
@@ -21,9 +22,6 @@ termux_step_configure() {
 	fi
 
 	CFLAGS+=" -DNO_SYSLOG"
-	if [ $TERMUX_ARCH = arm ]; then
-		CFLAGS+=" -fno-integrated-as"
-	fi
 
 	perl -p -i -e "s@TERMUX_CFLAGS@$CFLAGS@g" Configure
 	rm -Rf $TERMUX_PREFIX/lib/libcrypto.* $TERMUX_PREFIX/lib/libssl.*
@@ -39,12 +37,13 @@ termux_step_configure() {
 		no-ssl \
 		no-hw \
 		no-srp \
-		no-tests
+		no-tests \
+		enable-tls1_3
 }
 
 termux_step_make() {
 	make depend
-	make -j $TERMUX_MAKE_PROCESSES all
+	make -j $TERMUX_PKG_MAKE_PROCESSES all
 }
 
 termux_step_make_install() {

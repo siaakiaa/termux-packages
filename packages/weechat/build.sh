@@ -1,40 +1,58 @@
 TERMUX_PKG_HOMEPAGE=https://weechat.org/
 TERMUX_PKG_DESCRIPTION="Fast, light and extensible IRC chat client"
-TERMUX_PKG_LICENSE="GPL-2.0"
+TERMUX_PKG_LICENSE="GPL-3.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=3.0.1
-TERMUX_PKG_REVISION=6
-TERMUX_PKG_SRCURL=https://www.weechat.org/files/src/weechat-${TERMUX_PKG_VERSION}.tar.bz2
-TERMUX_PKG_SHA256=63ac24c41e88798ad48bfbe8a7e1fd56ddf24416f86bccd3a53b258a569ca038
-TERMUX_PKG_DEPENDS="libiconv, ncurses, libgcrypt, libcurl, libgnutls, libandroid-support, zlib"
+# `weechat-python-plugin` depends on libpython${TERMUX_PYTHON_VERSION}.so.
+# Please revbump and rebuild when bumping TERMUX_PYTHON_VERSION.
+TERMUX_PKG_VERSION="4.5.1"
+TERMUX_PKG_REVISION=1
+TERMUX_PKG_SRCURL=https://www.weechat.org/files/src/weechat-${TERMUX_PKG_VERSION}.tar.xz
+TERMUX_PKG_SHA256=67c143c7bc70e689b9ea86df674c9a9ff3cf44ccc9cdff21be6a561d5eafc528
+TERMUX_PKG_DEPENDS="libandroid-support, libcurl, libgcrypt, libgnutls, libiconv, ncurses, zlib, zstd"
 TERMUX_PKG_BREAKS="weechat-dev"
 TERMUX_PKG_REPLACES="weechat-dev"
-TERMUX_PKG_RM_AFTER_INSTALL="bin/weechat-curses share/man/man1/weechat-headless.1 share/icons"
-
-# Ruby 3.x is not supported as of weechat 3.0.1.
-#-- Checking for one of the modules 'ruby-2.7;ruby-2.6;ruby-2.5;ruby-2.4;ruby-2.3;ruby-2.2;ruby-2.1;ruby-2.0;ruby-1.9'
-#CMake Error at src/plugins/CMakeLists.txt:116 (message):
-#  Ruby not found
+TERMUX_PKG_AUTO_UPDATE=true
+TERMUX_PKG_RM_AFTER_INSTALL="
+bin/weechat-curses
+share/icons
+share/man/man1/weechat-headless.1
+"
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
--DCA_FILE=$TERMUX_PREFIX/etc/tls/cert.pem
+-DGETTEXT_FOUND=ON
+-DENABLE_CJSON=OFF
+-DENABLE_GUILE=OFF
 -DENABLE_HEADLESS=OFF
+-DENABLE_JAVASCRIPT=OFF
 -DENABLE_LUA=ON
 -DENABLE_MAN=ON
 -DENABLE_PERL=ON
--DENABLE_PYTHON3=ON
--DENABLE_TCL=OFF
+-DENABLE_PYTHON=ON
 -DENABLE_PHP=OFF
--DENABLE_RUBY=OFF
--DENABLE_JAVASCRIPT=OFF
--DENABLE_GUILE=OFF
+-DENABLE_RUBY=ON
 -DENABLE_SPELL=OFF
+-DENABLE_TCL=OFF
 -DENABLE_TESTS=OFF
--DSTRICT=ON
--DMSGFMT_EXECUTABLE=$(which msgfmt)
--DMSGMERGE_EXECUTABLE=$(which msgmerge)
--DXGETTEXT_EXECUTABLE=$(which xgettext)
+-DMSGFMT_EXECUTABLE=$(command -v msgfmt)
+-DMSGMERGE_EXECUTABLE=$(command -v msgmerge)
+-DXGETTEXT_EXECUTABLE=$(command -v xgettext)
+-DDL_LIBRARY=0
 "
 
 termux_step_pre_configure() {
-	TERMUX_PKG_EXTRA_CONFIGURE_ARGS+=" -DPKG_CONFIG_EXECUTABLE=$PKG_CONFIG"
+	TERMUX_PKG_EXTRA_CONFIGURE_ARGS+=" -DPKG_CONFIG_EXECUTABLE=${PKG_CONFIG}"
+
+	local _Ruby_API_VERSION=$(
+		. $TERMUX_SCRIPTDIR/packages/ruby/build.sh
+		echo "$(echo $TERMUX_PKG_VERSION | cut -d . -f 1-2).0"
+	)
+	local _Ruby_INCLUDE_DIR="$TERMUX_PREFIX/include/ruby-$_Ruby_API_VERSION"
+	TERMUX_PKG_EXTRA_CONFIGURE_ARGS+=" -DRuby_INCLUDE_DIR=$_Ruby_INCLUDE_DIR"
+	TERMUX_PKG_EXTRA_CONFIGURE_ARGS+=" -DRuby_CONFIG_INCLUDE_DIR=$_Ruby_INCLUDE_DIR"
+	if [ "$TERMUX_ARCH" == "arm" ]; then
+		TERMUX_PKG_EXTRA_CONFIGURE_ARGS+="/$TERMUX_ARCH-linux-androideabi"
+	else
+		TERMUX_PKG_EXTRA_CONFIGURE_ARGS+="/$TERMUX_ARCH-linux-android"
+	fi
+
+	LDFLAGS+=" -ldl"
 }
