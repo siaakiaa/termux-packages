@@ -2,8 +2,6 @@
 ##
 ##  Package update helper script which sets new SHA-256 for source bundle.
 ##
-##  Copyright 2020 Leonid Pliushch <leonid.pliushch@gmail.com>
-##
 ##  Licensed under the Apache License, Version 2.0 (the "License");
 ##  you may not use this file except in compliance with the License.
 ##  You may obtain a copy of the License at
@@ -20,8 +18,7 @@
 set -e
 
 if [ "${#}" = "0" ]; then
-	echo
-	echo "Usage: update-sha256 [package name] ..."
+	echo "Usage: update-checksum [package name] ..."
 	echo
 	echo "Update TERMUX_PKG_SHA256 of package and optionally commit changes."
 	echo
@@ -36,39 +33,61 @@ if git status >/dev/null 2>&1; then
 fi
 
 for package in "${@}"; do
-	package="${package%%/}"
-	buildsh_path="${REPO_ROOT}/packages/${package}/build.sh"
+	buildsh_path=
+	repo=
+	if [ -d "${package}" ] && [ -f "${package}/build.sh" ]; then
+		buildsh_path="${package}/build.sh"
+		package=$(basename ${package})
+	else
+		for repo_path in $(jq --raw-output 'del(.pkg_format) | keys | .[]' $REPO_ROOT/repo.json); do
+			if [ -d "${repo_path}/${package}" ] && [ -f "${repo_path}/${package}/build.sh" ]; then
+				repo=$(jq --raw-output '.["'$repo_path'"].name' $REPO_ROOT/repo.json)
+				repo=${repo#"termux-"}
+				buildsh_path="${repo_path}/${package}/build.sh"
+				package=$(basename ${package})
+			fi
+		done
+	fi
 
 	if [ ! -f "${buildsh_path}" ]; then
 		echo "${package}: skipping as no build.sh found"
 		continue
 	fi
 
-	# Calculate new checksum in subshell.
-	echo
-	new_checksum=$(
+	# Command substitution create a subshell, we want to do this
+	# to not effect the main scope's variables by sourcing the build script
+	new_checksum=($(
 		source "${buildsh_path}" 2>/dev/null
+		for url in "${TERMUX_PKG_SRCURL[@]}"; do
+			echo "Downloading ${url}" >&2
+			dl_tmpdir=$(mktemp -d "${TMPDIR-/tmp}/termux.src.dl.XXXXXXXX")
 
-		dl_tmpdir=$(mktemp -d "${TMPDIR-/tmp}/termux.src.dl.XXXXXXXX")
+			if [[ -d "${dl_tmpdir}" ]]; then
+				if ! curl --fail --location --retry 3 --output "${dl_tmpdir}/source-bundle" "$url"; then
+					rm -rf "${dl_tmpdir}"
+				fi
 
-		if [ -n "${dl_tmpdir}" ] && [ -d "${dl_tmpdir}" ]; then
-			if ! curl --fail --location --retry 3 --output "${dl_tmpdir}/source-bundle" \
-				"${TERMUX_PKG_SRCURL[0]}"; then
+				if [[ -f "${dl_tmpdir}/source-bundle" ]]; then
+					sha256sum "${dl_tmpdir}/source-bundle" | awk '{ print $1 }'
+				fi
+
 				rm -rf "${dl_tmpdir}"
 			fi
+		done
+	))
 
-			if [ -f "${dl_tmpdir}/source-bundle" ]; then
-				sha256sum "${dl_tmpdir}/source-bundle" | awk '{ print $1 }'
-			fi
-
-			rm -rf "${dl_tmpdir}"
-		fi
-	)
-
-	if [ -n "${new_checksum}" ]; then
+	if (( ${#new_checksum[@]} )); then
 		# Replace old SHA-256.
-		# Note that this will not work properly if SHA-256 is an array.
-		sed -i "s/^\(TERMUX_PKG_SHA256=\)\(.*\)\$/\1${new_checksum}/g" "${buildsh_path}"
+		if (( ${#new_checksum[@]} > 1 )); then
+			checksum="(\n$(printf '\\t%s\\n' "${new_checksum[@]}"))"
+		else
+			checksum="${new_checksum[0]}"
+		fi
+		if grep -qPz "TERMUX_PKG_SHA256=\([^)]*\)" "${buildsh_path}"; then
+			sed -zi "s/\(TERMUX_PKG_SHA256=\)([^)]*)/\1${checksum}/g" "${buildsh_path}"
+		else
+			sed -i "s/\(TERMUX_PKG_SHA256=\).*/\1${checksum}/g" "${buildsh_path}"
+		fi
 
 		# Delete revision as it shouldn't be present if package was updated.
 		sed -i "/TERMUX_PKG_REVISION=/d" "${buildsh_path}"
@@ -82,13 +101,13 @@ for package in "${@}"; do
 			git --no-pager diff --patch "${buildsh_path}"
 			echo "--------------------"
 			echo
-			echo "${package}: update to $(. "${buildsh_path}"; echo "${TERMUX_PKG_VERSION}" | cut -d: -f2-)"
+			echo "bump(${repo}/${package}): $(. "${buildsh_path}"; echo "${TERMUX_PKG_VERSION}" | cut -d: -f2-)"
 			echo
 			read -re -p "Do you want to commit changes ? (y/n) " CHOICE
 			echo
 			if [[ ${CHOICE} =~ (Y|y) ]]; then
 				git add "${buildsh_path}"
-				git commit -m "${package}: update to $(. "${buildsh_path}"; echo "${TERMUX_PKG_VERSION}" | cut -d: -f2-)"
+				git commit -m "bump(${repo}/${package}): $(. "${buildsh_path}"; echo "${TERMUX_PKG_VERSION}" | cut -d: -f2-)"
 			else
 				echo "Not committing to Git!"
 			fi

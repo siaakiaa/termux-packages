@@ -2,15 +2,25 @@ TERMUX_PKG_HOMEPAGE=https://github.com/KhronosGroup/Vulkan-Tools
 TERMUX_PKG_DESCRIPTION="Vulkan Tools and Utilities"
 TERMUX_PKG_LICENSE="Apache-2.0"
 TERMUX_PKG_MAINTAINER="@termux"
-TERMUX_PKG_VERSION=1.2.199
-TERMUX_PKG_SRCURL=https://github.com/KhronosGroup/Vulkan-Tools/archive/v${TERMUX_PKG_VERSION}.tar.gz
-TERMUX_PKG_SHA256=cda034e5990aa92848bfd98045ae77000a789e37b2080a97d4cd7fbb3a089580
-TERMUX_PKG_BUILD_DEPENDS="vulkan-headers, vulkan-loader-android"
-TERMUX_PKG_DEPENDS="libc++"
+TERMUX_PKG_VERSION="1.4.306"
+TERMUX_PKG_SRCURL=https://github.com/KhronosGroup/Vulkan-Tools/archive/refs/tags/v${TERMUX_PKG_VERSION}.tar.gz
+TERMUX_PKG_SHA256=8e3c3df74fa8e6408cbb772d20012c3fdf0bf1b3e363e18e909b6c99d5b489a2
+TERMUX_PKG_DEPENDS="libc++, libwayland, libx11, libxcb, vulkan-loader"
+TERMUX_PKG_BUILD_DEPENDS="libwayland-protocols, vulkan-headers (=${TERMUX_PKG_VERSION}), vulkan-volk"
+TERMUX_PKG_ANTI_BUILD_DEPENDS="vulkan-loader"
+TERMUX_PKG_AUTO_UPDATE=true
+TERMUX_PKG_UPDATE_TAG_TYPE="newest-tag"
+TERMUX_PKG_UPDATE_VERSION_REGEXP="\d+.\d+.\d+"
 TERMUX_PKG_EXTRA_CONFIGURE_ARGS="
--DBUILD_CUBE=OFF
+-DCMAKE_SYSTEM_NAME=Linux
+-DBUILD_CUBE=ON
 -DBUILD_ICD=OFF
--DBUILD_WSI_XCB_SUPPORT=OFF
--DBUILD_WSI_XLIB_SUPPORT=OFF
--DBUILD_WSI_WAYLAND_SUPPORT=OFF
+-DBUILD_WSI_WAYLAND_SUPPORT=ON
+-DBUILD_WSI_XCB_SUPPORT=ON
+-DBUILD_WSI_XLIB_SUPPORT=ON
+-DVULKAN_HEADERS_INSTALL_DIR=${TERMUX_PREFIX}
 "
+
+termux_step_pre_configure() {
+	termux_setup_wayland_cross_pkg_config_wrapper
+}

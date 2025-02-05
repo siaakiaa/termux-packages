@@ -1,6 +1,6 @@
 termux_setup_meson() {
 	termux_setup_ninja
-	local MESON_VERSION=0.60.1
+	local MESON_VERSION=1.6.1
 	local MESON_FOLDER
 
 	if [ "${TERMUX_PACKAGES_OFFLINE-false}" = "true" ]; then
@@ -16,14 +16,15 @@ termux_setup_meson() {
 		termux_download \
 			"https://github.com/mesonbuild/meson/releases/download/$MESON_VERSION/meson-$MESON_VERSION.tar.gz" \
 			"$MESON_TAR_FILE" \
-			5add789c953d984b500858b2851ee3d7add0460cf1a6f852f0a721af17384e13
+			1eca49eb6c26d58bbee67fd3337d8ef557c0804e30a6d16bfdf269db997464de
 		tar xf "$MESON_TAR_FILE" -C "$TERMUX_PKG_TMPDIR"
-		# Avoid meson stripping away DT_RUNPATH, see
-		# (https://github.com/NetBSD/pkgsrc/commit/2fb2c013715a6374b4e2d1f8e9f2143e827f0f64
-		# and https://github.com/mesonbuild/meson/issues/314):
-		perl -p -i -e 's/self.fix_rpathtype_entry\(new_rpath, DT_RUNPATH\)//' \
-			$MESON_TMP_FOLDER/mesonbuild/scripts/depfixer.py
-
+		shopt -s nullglob
+		local f
+		for f in "$TERMUX_SCRIPTDIR"/scripts/build/setup/meson-*.patch; do
+			echo "[${FUNCNAME[0]}]: Applying $(basename "$f")"
+			patch --silent -p1 -d "$MESON_TMP_FOLDER" < "$f"
+		done
+		shopt -u nullglob
 		mv "$MESON_TMP_FOLDER" "$MESON_FOLDER"
 	fi
 	TERMUX_MESON="$MESON_FOLDER/meson.py"
@@ -49,14 +50,20 @@ termux_setup_meson() {
 	echo "[binaries]" > $TERMUX_MESON_CROSSFILE
 	echo "ar = '$AR'" >> $TERMUX_MESON_CROSSFILE
 	echo "c = '$CC'" >> $TERMUX_MESON_CROSSFILE
+	echo "cmake = 'cmake'" >> $TERMUX_MESON_CROSSFILE
 	echo "cpp = '$CXX'" >> $TERMUX_MESON_CROSSFILE
 	echo "ld = '$LD'" >> $TERMUX_MESON_CROSSFILE
-	echo "pkgconfig = '$PKG_CONFIG'" >> $TERMUX_MESON_CROSSFILE
+	echo "pkg-config = '$PKG_CONFIG'" >> $TERMUX_MESON_CROSSFILE
 	echo "strip = '$STRIP'" >> $TERMUX_MESON_CROSSFILE
 
+	if [ "$TERMUX_PACKAGE_LIBRARY" = "bionic" ]; then
+		echo '' >> $TERMUX_MESON_CROSSFILE
+		echo "[properties]" >> $TERMUX_MESON_CROSSFILE
+		echo "needs_exe_wrapper = true" >> $TERMUX_MESON_CROSSFILE
+  	fi
+
 	echo '' >> $TERMUX_MESON_CROSSFILE
-	echo "[properties]" >> $TERMUX_MESON_CROSSFILE
-	echo "needs_exe_wrapper = true" >> $TERMUX_MESON_CROSSFILE
+	echo "[built-in options]" >> $TERMUX_MESON_CROSSFILE
 
 	echo -n "c_args = [" >> $TERMUX_MESON_CROSSFILE
 	local word first=true
@@ -83,7 +90,7 @@ termux_setup_meson() {
 	echo ']' >> $TERMUX_MESON_CROSSFILE
 
 	local property
-	for property in c_link_args cpp_link_args; do
+	for property in c_link_args cpp_link_args fortran_link_args; do
 		echo -n "$property = [" >> $TERMUX_MESON_CROSSFILE
 		first=true
 		for word in $LDFLAGS; do
@@ -102,5 +109,9 @@ termux_setup_meson() {
 	echo "cpu_family = '$MESON_CPU_FAMILY'" >> $TERMUX_MESON_CROSSFILE
 	echo "cpu = '$MESON_CPU'" >> $TERMUX_MESON_CROSSFILE
 	echo "endian = 'little'" >> $TERMUX_MESON_CROSSFILE
-	echo "system = 'android'" >> $TERMUX_MESON_CROSSFILE
+ 	if [ "$TERMUX_PACKAGE_LIBRARY" = "bionic" ]; then
+		echo "system = 'android'" >> $TERMUX_MESON_CROSSFILE
+  	elif [ "$TERMUX_PACKAGE_LIBRARY" = "glibc" ]; then
+		echo "system = 'linux'" >> $TERMUX_MESON_CROSSFILE
+     	fi
 }
